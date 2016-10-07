@@ -1,14 +1,18 @@
 import datetime
 import json
 from mock import Mock, patch
+import os
+import requests
 import tzlocal
 
+from django.conf import settings
 from django.core.urlresolvers import reverse
 from rest_framework.test import APITestCase
 
 from .api_token_reader import ApiTokenReader
 from .models import Event
 from apiproxy import constants
+from apiproxy.startup_manager import StartupManager
 
 def get_side_effect(event_id):
 	"""Returns custom side effect for requests.get() Mock, based on event ID
@@ -30,15 +34,32 @@ def get_side_effect(event_id):
 
 class EventApiProxyTest(APITestCase):
 
-	def setUp(self):
-		# Get a valid authentication token
-		self.token = ApiTokenReader.getUserToken(constants.SAMPLE_USER)
-		
-		# Headers which will be used to call the API proxy, and are also expected in the Calendar42 API call
-		self.api_headers = {
+	@classmethod
+	def setUpClass(cls):
+		# Expected headers in the Calendar42 API call
+		cls.expected_api_headers = {
 			'Accept': 'application/json',
 			'Content-type': 'application/json',
-			'Authorization': 'Token %s' % self.token,
+			'Authorization': 'Token %s' % ApiTokenReader.getUserToken(constants.SAMPLE_USER)
+		}
+	
+	@classmethod
+	def tearDownClass(cls):
+		pass
+	
+	def setUp(self):
+		StartupManager.startup()
+		
+		# Get a valid authentication token
+		api_proxy_token_file_path = os.path.join(settings.BASE_DIR, constants.SAMPLE_USER_FILE_NAME)
+		with open(api_proxy_token_file_path) as token_file:
+			self.token = token_file.readline().strip()
+		
+		# Headers which will be used to call the API proxy
+		self.api_proxy_headers = {
+			'HTTP_ACCEPT': 'application/json',
+			'HTTP_CONTENT_TYPE': 'application/json',
+			'HTTP_AUTHORIZATION': 'Token %s' % self.token,
 		}
 	
 	def get(self, url):
@@ -48,7 +69,7 @@ class EventApiProxyTest(APITestCase):
 		"""
 		response = self.client.get(
 			url,
-			**(self.api_headers)
+			**(self.api_proxy_headers)
 		)
 		return response
 	
@@ -89,8 +110,8 @@ class EventApiProxyTest(APITestCase):
 			event_api_url = constants.CALENDAR42_API_BASE_URL + constants.CALENDAR42_API_EVENT.format(event_id)
 			participants_api_url = constants.CALENDAR42_API_BASE_URL + constants.CALENDAR42_API_PARTICIPANTS.format(event_id)
 			
-			patched_get.assert_any_call(event_api_url, headers=self.api_headers)
-			patched_get.assert_any_call(participants_api_url, headers=self.api_headers)
+			patched_get.assert_any_call(event_api_url, headers=self.__class__.expected_api_headers)
+			patched_get.assert_any_call(participants_api_url, headers=self.__class__.expected_api_headers)
 	
 	def test_event_not_in_cache(self):
 		"""Tests the API proxy's behaviour when the event is NOT present at all in the cache"""

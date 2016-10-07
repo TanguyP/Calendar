@@ -12,6 +12,9 @@ TOKEN_SECTION_NAME = 'tokens'
 # Sample user name for the API
 SAMPLE_USER = 'sample_user'
 
+# Name of the file which contains the token for a sample user
+SAMPLE_USER_FILE_NAME = 'sample_user_token.txt'
+
 # Regular expression describing the allowed format for an event ID
 EVENT_ID_PATTERN = r'[^/]+'
 
