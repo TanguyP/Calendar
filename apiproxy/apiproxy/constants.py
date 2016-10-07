@@ -6,6 +6,9 @@ CACHE_DURATION = datetime.timedelta(minutes=4.2)
 # Name of the file containing the valid authentication tokens
 TOKEN_FILE_NAME = 'tokens.txt'
 
+# Sample user name for the API
+SAMPLE_USER = 'sample_user'
+
 # Regular expression describing the allowed format for an event ID
 EVENT_ID_PATTERN = r'[^/]+'
 
