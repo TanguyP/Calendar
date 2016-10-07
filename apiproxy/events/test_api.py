@@ -1,28 +1,47 @@
+import ConfigParser
 import datetime
 import json
-from mock import patch
+from mock import Mock, patch
 import os
-from unipath import Path
+import tzlocal
 
 from django.core.urlresolvers import reverse
-from django.test import TestCase
+from rest_framework.test import APITestCase
+from rest_framework.test import APIRequestFactory
 
+from .api_token_reader import ApiTokenReader
 from .models import Event
 from apiproxy import constants
 
-class EventApiProxyTest(TestCase):
+def get_side_effect(event_id):
+	"""Returns custom side effect for requests.get() Mock, based on event ID
+	
+	In practice, this will be used to have the right mock HTTP responses depending on the URL that was called
+	"""
+	def side_effect(url, *args, **kwargs):
+		if url.endswith(constants.CALENDAR42_API_EVENT.format(event_id)):
+			response_text = {'data': [{'id': event_id, 'title': 'bar'}]}
+		else:
+			response_text = {'data': [{'subscriber': {'first_name': 'Foobar'}}]}
+		
+		mock_response = Mock()
+		mock_response.json = Mock(return_value=response_text)
+		
+		return mock_response
+	
+	return side_effect
+
+class EventApiProxyTest(APITestCase):
 
 	def setUp(self):
 		# Get a valid authentication token
-		token_file_path = Path(os.path.abspath(__file__)).ancestor(2).child(constants.TOKEN_FILE_NAME)
-		with open(token_file_path) as token_file:
-			self.token = token_file.readline().strip()
+		self.token = ApiTokenReader.getUserToken(constants.SAMPLE_USER)
 		
 		# Headers which will be used to call the API proxy, and are also expected in the Calendar42 API call
 		self.api_headers = {
-			Accept='application/json',
-			Content-type='application/json',
-			Authorization='Token %s' % self.token,
+			'Accept': 'application/json',
+			'Content-type': 'application/json',
+			'Authorization': 'Token %s' % self.token,
 		}
 	
 	def get(self, url):
@@ -43,12 +62,12 @@ class EventApiProxyTest(TestCase):
 		event_data = {
 			'id': 'abcd1234',
 			'title': 'Coffee Party in Delft',
-			'participants': ['Alice', 'Bob'],
+			'names': ['Alice', 'Bob'],
 		}
 		Event.objects.get_or_create(
 			id=event_data['id'],
 			title=event_data['title'],
-			participants=constants.PARTICIPANT_SEPARATOR.join(event_data['participants'])
+			names=constants.PARTICIPANT_SEPARATOR.join(event_data['names'])
 		)
 		
 		# Call the API
@@ -59,35 +78,37 @@ class EventApiProxyTest(TestCase):
 		data = json.loads(api_response.content)
 		self.assertEquals(event_data, data)
 	
-	def check_api_called(self, event_id):
+	def check_api_called(self, event_id, side_effect):
 		"""Helper method - Makes sure the Calendar42 API is called when we call the API proxy
 		
 		@param {str} event_id	The event id with which to call the API proxy
 		"""
 		api_url = reverse('events_with_subscriptions', kwargs={'event_id': event_id})
-		with patch('requests.get') as patched_get:
-			api_response = self.get(api_url)
+		
+		with patch('requests.get', side_effect=side_effect) as patched_get:
+			self.get(api_url)
 			
 			# URLs from the Calendar42 which should have been called
 			event_api_url = constants.CALENDAR42_API_BASE_URL + constants.CALENDAR42_API_EVENT.format(event_id)
 			participants_api_url = constants.CALENDAR42_API_BASE_URL + constants.CALENDAR42_API_PARTICIPANTS.format(event_id)
 			
-			patched_get.assert_called_with(event_api_url, headers=self.api_headers)
-			patched_get.assert_called_with(participants_api_url, headers=self.api_headers)
+			patched_get.assert_any_call(event_api_url, headers=self.api_headers)
+			patched_get.assert_any_call(participants_api_url, headers=self.api_headers)
 	
 	def test_event_not_in_cache(self):
 		"""Tests the API proxy's behaviour when the event is NOT present at all in the cache"""
 		event_id = 'this_does_not_exist_89732'
-		self.check_api_called(event_id)
+		self.check_api_called(event_id, get_side_effect(event_id))
 	
 	def test_event_cache_outdated(self):
 		"""Tests the API proxy's behaviour when the event has been cached BUT is outdated"""
-		event = Event.objects.get_or_create(
+		event, _ = Event.objects.get_or_create(
 			id='efgh5678',
 			title='Ice Cream Party in Ushuaia',
-			participants=['John', 'Jane']
+			names=['John', 'Jane']
 		)
-		event.cache_date = datetime.datetime.now() - constants.CACHE_DURATION - datetime.timedelta(seconds=1)
+		now = datetime.datetime.now(tzlocal.get_localzone())
+		event.cache_date = now - constants.CACHE_DURATION - datetime.timedelta(seconds=1)
 		event.save()
 		
-		self.check_api_called(event.id)
+		self.check_api_called(event.id, get_side_effect(event.id))

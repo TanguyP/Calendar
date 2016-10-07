@@ -4,7 +4,10 @@ import datetime
 CACHE_DURATION = datetime.timedelta(minutes=4.2)
 
 # Name of the file containing the valid authentication tokens
-TOKEN_FILE_NAME = 'tokens.txt'
+TOKEN_FILE_NAME = 'tokens.ini'
+
+# Name of the configuration section, inside the token file, which contains the tokens
+TOKEN_SECTION_NAME = 'tokens'
 
 # Sample user name for the API
 SAMPLE_USER = 'sample_user'
