@@ -20,6 +20,12 @@ In order to limit malicious use of the API proxy's resources, we will enforce ra
 
 Since we need authentication, we need access to the same user tokens as the Calendar42 API. For this exercise, we will use the most simple solution: a local file containing the tokens is read by our Django app. The file will obviously not be tracked with Git, so I'll send it by e-mail.
 
+UPDATE: we'll actually have different tokens for the API proxy and the API, but the API proxy still needs access to the API's tokens.
+Here's how it works:
+1. The user authenticates to the API proxy with a first token.
+2. The API proxy reads, in its private configuration file containing the API tokens, the token corresponding to the current user.
+3. The API proxy inserts that token in the request it makes to the API.
+
 The HTTP request will only be forwarded to the Calendar42 API if the user is authenticated.
 
 Note: in a real-life scenario, the API proxy's limiting rates for authenticated users should always be kept in line with the Calendar42 API's rates. Otherwise, our proxy may allow a user's HTTP request that will in the end be refused by the Calendar42 API, or on the contrary, may block a request that should have been allowed.

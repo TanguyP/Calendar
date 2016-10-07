@@ -1,1 +1,7 @@
-tokens.txt
+**/.project
+**/.pydevproject
+**/tokens.ini
+**/server.log
+**/sample_user_token.txt
+**/*.sqlite3
+**/*.pyc
