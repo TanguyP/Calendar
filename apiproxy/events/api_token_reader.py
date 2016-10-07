@@ -1,5 +1,3 @@
-"""Utility class for reading tokens from the Calendar42 API token file"""
-
 import ConfigParser
 import os
 
@@ -8,6 +6,7 @@ from django.conf import settings
 from apiproxy import constants
 
 class ApiTokenReader():
+	"""Utility class for reading tokens from the Calendar42 API token file"""
 
 	@classmethod
 	def getUserToken(cls, username):
@@ -18,9 +17,9 @@ class ApiTokenReader():
 		
 		try:
 			token = parser.get(constants.TOKEN_SECTION_NAME, constants.SAMPLE_USER)
-		except ConfigParser.NoSectionError as e:
+		except ConfigParser.NoSectionError:
 			raise ConfigParser.NoSectionError("Missing %s section in %s configuration file" % (constants.TOKEN_SECTION_NAME, constants.TOKEN_FILE_NAME))
-		except ConfigParser.NoOptionError as e:
+		except ConfigParser.NoOptionError:
 			raise ConfigParser.NoOptionError("Missing token for user %s in %s configuration file" % (constants.SAMPLE_USER, constants.TOKEN_FILE_NAME))
 		
 		return token

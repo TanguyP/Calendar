@@ -7,12 +7,22 @@ from .exceptions import LoggedDetailsAPIException
 logger = logging.getLogger(__name__)
 
 class APIActionCaller():
+	"""Abstract class which must be inherited to handle a call to a Calendar42 API action
+	
+	The abstract methods to implement are:
+	* extract_data()
+	* get_relative_url()
+	"""
 	
 	def __init__(self, token):
+		"""
+		@param {str} token	The authentication token to use when calling the Calendar42 API
+		"""
 		self._token = token
 	
 	def call(self, *args, **kwargs):
 		"""Calls the Calendar42 API and returns the response
+		Parameters (if any) are forwarded to self.get_relative_url(), which may need some runtime data to compute the URL
 		
 		@return	{dict}	The JSON API response
 		"""

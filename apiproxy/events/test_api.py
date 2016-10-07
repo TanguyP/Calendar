@@ -1,13 +1,10 @@
-import ConfigParser
 import datetime
 import json
 from mock import Mock, patch
-import os
 import tzlocal
 
 from django.core.urlresolvers import reverse
 from rest_framework.test import APITestCase
-from rest_framework.test import APIRequestFactory
 
 from .api_token_reader import ApiTokenReader
 from .models import Event
@@ -88,7 +85,7 @@ class EventApiProxyTest(APITestCase):
 		with patch('requests.get', side_effect=side_effect) as patched_get:
 			self.get(api_url)
 			
-			# URLs from the Calendar42 which should have been called
+			# URLs from the Calendar42 API which should have been called
 			event_api_url = constants.CALENDAR42_API_BASE_URL + constants.CALENDAR42_API_EVENT.format(event_id)
 			participants_api_url = constants.CALENDAR42_API_BASE_URL + constants.CALENDAR42_API_PARTICIPANTS.format(event_id)
 			

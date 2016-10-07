@@ -20,6 +20,7 @@ class EventView(APIView):
 	permission_classes = (IsAuthenticated,)
 
 	def get(self, request, event_id, format=None):
+		# Get token for the Calendar42 API call
 		token = ApiTokenReader.getUserToken(request.user.username)
 			
 		try:
