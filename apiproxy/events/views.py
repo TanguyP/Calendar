@@ -3,9 +3,10 @@ import logging
 import tzlocal
 
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import authentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .api_action_caller import EventDetailsAPIActionCaller, EventParticipantsAPIActionCaller
 from .api_token_reader import ApiTokenReader
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class EventView(APIView):
 	authentication_classes = (authentication.TokenAuthentication,)
+	permission_classes = (IsAuthenticated,)
 
 	def get(self, request, event_id, format=None):
 		token = ApiTokenReader.getUserToken(request.user.username)
